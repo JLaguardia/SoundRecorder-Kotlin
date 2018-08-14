@@ -4,6 +4,7 @@ import `object`.Sound
 import adapter.SoundAdapter
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.icu.util.Calendar
@@ -12,55 +13,102 @@ import android.os.Bundle
 import android.os.Environment
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
+import android.text.InputType
 import android.view.View
 import android.view.Window
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.PopupMenu
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
     val TAG: String = MainActivity::class.java.simpleName
     val internalDir = "/sounds"
+    val KEY_APPNAME = "spappname"
+    private var appName = "Generic Soundboard"
     private var soundList = ArrayList<Sound>()
     private lateinit var mRecorder: MediaRecorder
     private var isRecording = false
     private var userFileName = ""
-    private var mPrefs: SharedPreferences? = null
+    private lateinit var mPrefs: SharedPreferences
     private var mSavedRootFile: File? = null
     private var fileExtension = "3GP"
-
-//    private val mOnNavigationItemSelectedListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
-//        when (item.itemId) {
-//            R.id.navigation_home -> {
-//                return@OnNavigationItemSelectedListener true
-//            }
-//            R.id.navigation_files -> {
-//                return@OnNavigationItemSelectedListener true
-//            }
-//            R.id.navigation_settings -> {
-//                return@OnNavigationItemSelectedListener true
-//            }
-//        }
-//        false
-//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
         setContentView(R.layout.activity_main)
-//        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
+    }
+
+    override fun onResume() {
+        super.onResume()
         mPrefs = getPreferences(Context.MODE_PRIVATE)
         init()
-
     }
 
     private fun init(){
         populateSoundList()
+        appName = mPrefs.getString(KEY_APPNAME, "Generic Soundboard")
+        lblAppTitle.text = appName
         rvMainList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         rvMainList.adapter = SoundAdapter(soundList, this)
+        btnMainOpts.setOnClickListener{
+            var poppy = PopupMenu(this, it)
+            poppy.inflate(R.menu.popup_menu)
+            poppy.setOnMenuItemClickListener {
+                var builder = AlertDialog.Builder(this)
+                when(it.itemId) {
+                    R.id.miRename -> {
+                        builder.setTitle("Rename Application")
+                        val input = EditText(this)
+                        input.inputType = InputType.TYPE_CLASS_TEXT
+                        builder.setView(input)
+                        builder.setPositiveButton("Confirm") { _: DialogInterface, _: Int ->
+                            appName = input.text.toString()
+                            mPrefs.edit().putString(KEY_APPNAME, appName).apply()
+                            lblAppTitle.text = appName
+                        }
+
+                        builder.setNegativeButton("Cancel") { dlg: DialogInterface, _: Int ->
+                            dlg.cancel()
+                        }
+
+                        builder.show()
+
+//                        layoutInflater.inflate(R.layout.rename_view, btnMainOpts.parent as ViewGroup, false)
+                        true
+                    }
+                    R.id.miDelete -> {
+                        if(soundList.count() > 0){
+                            builder.setTitle("Delete all sound files?")
+                            builder.setPositiveButton("Yes"){ _: DialogInterface, _: Int ->
+                                deleteAllFiles()
+                            }
+
+                            builder.setNegativeButton("No"){dlg: DialogInterface, _: Int ->
+                                dlg.cancel()
+                            }
+                            builder.show()
+                        }
+
+                        true
+                    }
+                    R.id.miProperties -> {
+                        true
+                    } else -> {
+                    false
+                    }
+                }
+            }
+
+            poppy.show()
+
+        }
     }
 
     private fun populateSoundList(){
@@ -88,6 +136,17 @@ class MainActivity : AppCompatActivity() {
             populateSoundList()
             rvMainList.adapter.notifyDataSetChanged()
         }
+    }
+
+    fun deleteAllFiles(){
+        soundList.forEach { sound: Sound ->
+            if(sound.file != null)
+                sound.file!!.delete()
+        }
+
+        soundList.clear()
+        populateSoundList()
+        rvMainList.adapter.notifyDataSetChanged()
     }
 
     fun startRecording(img: ImageView){

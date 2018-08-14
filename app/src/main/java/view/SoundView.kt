@@ -12,5 +12,5 @@ import com.prismsoftworks.genericsoundboard.R
 class SoundView(view: View): RecyclerView.ViewHolder(view){
     val soundPlay: ImageView = view.findViewById(R.id.sound_play)
     val soundName: TextView = view.findViewById(R.id.sound_name)
-    val soundEdit: IEdit;
+    val soundEdit: TextView = view.findViewById(R.id.sound_edit)
 }

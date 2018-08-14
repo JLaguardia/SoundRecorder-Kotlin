@@ -18,13 +18,19 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_weight="1"
-        android:textSize="24dp"
+        android:textSize="24sp"
         tools:text="Sound_1.mp4" />
 
-    <ImageView
+    <TextView
         android:id="@+id/sound_edit"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
+        android:layout_weight="0.2"
         android:layout_height="wrap_content"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
         android:padding="2dp"
-        android:src="@drawable/ic_create_black_48dp" />
+        android:layout_gravity="center"
+        android:text="&#8942;"
+        android:textSize="30sp"/>
 </LinearLayout>
