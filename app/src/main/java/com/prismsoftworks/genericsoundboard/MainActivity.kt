@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity() {
     private var soundList = ArrayList<Sound>()
     private lateinit var mRecorder: MediaRecorder
     private var isRecording = false
-    private var userFileName = ""
     private lateinit var mPrefs: SharedPreferences
     private var mSavedRootFile: File? = null
     private var fileExtension = "3GP"
@@ -49,6 +48,26 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         mPrefs = getPreferences(Context.MODE_PRIVATE)
         init()
+    }
+
+    private fun needPermission(permissions: Array<Int>): Boolean{
+        for(pm in permissions){
+            if(pm != PackageManager.PERMISSION_GRANTED){
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private fun checkPerms(permissions: Array<Int>, requested: Array<String>): Boolean {
+        if(needPermission(permissions)) {
+            ActivityCompat.requestPermissions(this, requested, 0)
+        } else {
+            return true
+        }
+
+        return !needPermission(permissions)
     }
 
     private fun init(){
@@ -80,7 +99,6 @@ class MainActivity : AppCompatActivity() {
 
                         builder.show()
 
-//                        layoutInflater.inflate(R.layout.rename_view, btnMainOpts.parent as ViewGroup, false)
                         true
                     }
                     R.id.miDelete -> {
@@ -112,6 +130,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun populateSoundList(){
+        val permsCheck = arrayOf(
+                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                , ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE))
+        val permsVal = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
+        if(!checkPerms(permsCheck, permsVal)){
+            return
+        }
+
         mSavedRootFile = File(Environment.getExternalStorageDirectory().absolutePath + internalDir)
         if(!mSavedRootFile!!.exists()){
             mSavedRootFile!!.mkdirs()
@@ -150,30 +176,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun startRecording(img: ImageView){
-        val permissions = intArrayOf(
-                ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                , ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                , ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE))
-
-        if (permissions[0] != PackageManager.PERMISSION_GRANTED
-                || permissions[1] != PackageManager.PERMISSION_GRANTED
-                || permissions[2] != PackageManager.PERMISSION_GRANTED) {
-            val neededPerms = arrayOf(Manifest.permission.RECORD_AUDIO
-                                    , Manifest.permission.WRITE_EXTERNAL_STORAGE
-                                    , Manifest.permission.READ_EXTERNAL_STORAGE)
-            ActivityCompat.requestPermissions(this, neededPerms, 0)
-            if (permissions[0] != PackageManager.PERMISSION_GRANTED
-                    || permissions[1] != PackageManager.PERMISSION_GRANTED
-                    || permissions[2] != PackageManager.PERMISSION_GRANTED) {
-                return
-            }
+        val perms = arrayOf(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO))
+        val neededPerms = arrayOf(Manifest.permission.RECORD_AUDIO)
+        if(!checkPerms(perms, neededPerms)){
+            return
         }
 
         mRecorder = MediaRecorder()
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
 //        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-        mRecorder.setOutputFile(getFilePath(true))
+        mRecorder.setOutputFile(getFilePath())
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB)
 
         try {
@@ -189,24 +202,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getFilePath(newFile: Boolean): String {
-        if (newFile) {
-            userFileName = ""
-        }
-
-        userFileName = if (userFileName == "") getDefaultName() else userFileName + fileExtension
-        var copyCount = 0
-        var tempFileName = ""
-        for (file in mSavedRootFile!!.listFiles()) {
-            if (file.name == userFileName) {
-                copyCount++
-                tempFileName = userFileName + copyCount
-            }
-        }
-
-        if (tempFileName != "")
-            userFileName = tempFileName
-        return mSavedRootFile!!.absolutePath + "/" + userFileName
+    private fun getFilePath(): String {
+        return mSavedRootFile!!.absolutePath + "/" + getDefaultName()
     }
 
     private fun getDefaultName(): String {

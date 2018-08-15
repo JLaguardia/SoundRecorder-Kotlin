@@ -13,10 +13,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.PopupMenu
-import android.widget.TextView
+import android.widget.*
 import com.prismsoftworks.genericsoundboard.MainActivity
 import com.prismsoftworks.genericsoundboard.R
 import kotlinx.android.synthetic.main.activity_main.*
@@ -54,21 +51,26 @@ class SoundAdapter(sounds: MutableList<Sound>, val context: Context): RecyclerVi
 
             holder.soundEdit.visibility = View.VISIBLE
             holder.soundEdit.setOnClickListener { v ->
-                var poppy = PopupMenu(context, v)
+                val poppy = PopupMenu(context, v)
                 poppy.inflate(R.menu.popup_menu)
                 poppy.setOnMenuItemClickListener {
                     var builder = AlertDialog.Builder(context)
                     when (it.itemId) {
                         R.id.miRename -> {
                             builder.setTitle("Rename Sound File")
+                            val container = FrameLayout(context)
+                            container.setPadding(8, 0, 8, 0)
                             val input = EditText(context)
                             input.hint = sound.title
                             input.inputType = InputType.TYPE_CLASS_TEXT
-                            builder.setView(input)
+                            container.addView(input)
+                            builder.setView(container)
                             builder.setPositiveButton("Confirm") { _: DialogInterface, _: Int ->
                                 val chosenName = input.text.toString()
-                                sound.title = chosenName
-                                sound.file!!.renameTo(File(chosenName))
+                                val nameSplit = sound.file!!.name.split(".")
+                                sound.title = "$chosenName.${nameSplit.last()}"
+                                val newFile = File("${sound.file!!.parent}/${sound.title}")
+                                sound.file!!.renameTo(newFile)
                                 notifyDataSetChanged()
                             }
 
